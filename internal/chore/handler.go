@@ -96,6 +96,8 @@ func NewHandler(cr *chRepo.ChoreRepository, circleRepo *cRepo.CircleRepository, 
 //	@Security		JWTKeyAuth
 //	@Security		APIKeyAuth
 //	@Param			includeArchived	query		boolean						false	"Include archived chores"
+//	@Param			search			query		string						false	"Search tasks by name or label path"
+//	@Param			label			query		string						false	"Filter tasks by label path, including nested children"
 //	@Success		200				{object}	map[string][]chModel.Chore	"res: array of chores"
 //	@Failure		401				{object}	map[string]string			"error: Authentication failed"
 //	@Failure		500				{object}	map[string]string			"error: Failed to retrieve chores"
@@ -125,9 +127,63 @@ func (h *Handler) GetChores(c *gin.Context) {
 		return
 	}
 
+	chores = filterChoresByNestedLabel(chores, c.Query("label"))
+	chores = searchChoresByNestedLabel(chores, c.Query("search"))
+
 	c.JSON(200, gin.H{
 		"res": chores,
 	})
+}
+
+func filterChoresByNestedLabel(chores []*chModel.Chore, labelQuery string) []*chModel.Chore {
+	labelQuery = strings.TrimSpace(labelQuery)
+	if labelQuery == "" {
+		return chores
+	}
+
+	filtered := make([]*chModel.Chore, 0, len(chores))
+	for _, chore := range chores {
+		if choreHasNestedLabel(chore, labelQuery) {
+			filtered = append(filtered, chore)
+		}
+	}
+	return filtered
+}
+
+func searchChoresByNestedLabel(chores []*chModel.Chore, searchQuery string) []*chModel.Chore {
+	searchQuery = strings.TrimSpace(searchQuery)
+	if searchQuery == "" {
+		return chores
+	}
+
+	normalizedQuery := strings.ToLower(searchQuery)
+	filtered := make([]*chModel.Chore, 0, len(chores))
+	for _, chore := range chores {
+		if strings.Contains(strings.ToLower(chore.Name), normalizedQuery) {
+			filtered = append(filtered, chore)
+			continue
+		}
+		if strings.HasPrefix(normalizedQuery, "#") && choreHasNestedLabel(chore, normalizedQuery) {
+			filtered = append(filtered, chore)
+			continue
+		}
+		if chore.LabelsV2 != nil && strings.Contains(strings.ToLower(lModel.NestedSearchText(*chore.LabelsV2)), normalizedQuery) {
+			filtered = append(filtered, chore)
+		}
+	}
+	return filtered
+}
+
+func choreHasNestedLabel(chore *chModel.Chore, labelQuery string) bool {
+	if chore.LabelsV2 == nil {
+		return false
+	}
+	for _, label := range *chore.LabelsV2 {
+		if lModel.NestedNameMatches(label.Name, labelQuery) {
+			return true
+		}
+	}
+	return false
 }
 
 // GetArchivedChores godoc

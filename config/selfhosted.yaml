@@ -15,7 +15,7 @@ database:
   password: "secret"
   name: "secret"
 jwt:
-  secret: "change_this_to_a_secure_random_string_32_characters_long"
+  secret: 4bb5acd1dd2d38fa6b547639982f1f9c
   session_time: 168h # 7 days
   max_refresh: 1440h # 60 days 
 server:

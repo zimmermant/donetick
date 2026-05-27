@@ -50,6 +50,8 @@ func (h *API) GetAllChores(c *gin.Context) {
 		c.JSON(500, gin.H{"error": err.Error()})
 		return
 	}
+	chores = filterChoresByNestedLabel(chores, c.Query("label"))
+	chores = searchChoresByNestedLabel(chores, c.Query("search"))
 	c.JSON(200, chores)
 }
 
