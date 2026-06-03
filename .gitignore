@@ -1,3 +1,15 @@
 donetick.db
 .vscode/launch.json
 *.exe
+
+# Local build artifacts
+/donetick
+
+# Local runtime data and database backups
+/data/
+*.db
+*.db-*
+*.db.*.bak
+
+# Generated frontend bundle copied in for local Docker builds
+/frontend/dist/

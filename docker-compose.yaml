@@ -1,21 +1,23 @@
 ---
 services:
-  app:
+  donetick:
     build:
       context: .
-      dockerfile: Dockerfile
-    container_name: donetick-core
+      dockerfile: Dockerfile.dev
+    image: donetick-local:latest
+    container_name: donetick
     restart: unless-stopped
 
     volumes:
-      # sqlite database:
-      - ./data:/usr/src/app/data
+      - ./data:/donetick-data
+      - ./config:/config
 
     ports:
-      - "8085:8000"
+      - "2021:2021"
     environment:
-      - DT_ENV=prod
-    hostname: donetick-core
-    command: ["/donetick-core"]  # Command to execute your binary inside the container
+      - DT_ENV=selfhosted
+      - DT_SQLITE_PATH=/donetick-data/donetick.db
+      - TZ=America/Chicago
+    hostname: donetick
 networks:
   default:

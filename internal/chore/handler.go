@@ -304,7 +304,7 @@ type ChoreReq struct {
 	IsActive             *bool                         `json:"isActive" binding:"omitempty"`
 	Notification         bool                          `json:"notification"`
 	NotificationMetadata *chModel.NotificationMetadata `json:"notificationMetadata"`
-	LabelsV2             *[]lModel.LabelReq            `json:"labelsV2" binding:"omitempty,dive,unique=LabelID"`
+	LabelsV2             *[]lModel.LabelReq            `json:"labelsV2" binding:"omitempty,dive"`
 	UpdatedAt            *time.Time                    `json:"updatedAt"`
 	Priority             *int                          `json:"priority" binding:"omitempty,gte=0,lte=5"`
 	CompletionWindow     *int                          `json:"completionWindow" binding:"omitempty,min=0"`
@@ -315,6 +315,22 @@ type ChoreReq struct {
 	IsPrivate            *bool                         `json:"isPrivate" binding:"omitempty"`
 	ProjectID            *int                          `json:"projectId" binding:"omitempty,gt=0"`
 	ThingTrigger         *tModel.ThingTrigger          `json:"thingTrigger"`
+}
+
+func validateChoreReqLabels(labels *[]lModel.LabelReq) error {
+	if labels == nil {
+		return nil
+	}
+
+	seen := make(map[int]struct{}, len(*labels))
+	for _, label := range *labels {
+		if _, ok := seen[label.LabelID]; ok {
+			return fmt.Errorf("duplicate label id %d", label.LabelID)
+		}
+		seen[label.LabelID] = struct{}{}
+	}
+
+	return nil
 }
 
 type ActionOptions struct {
@@ -439,6 +455,14 @@ func (h *Handler) CreateChore(c *gin.Context) {
 		logger.Error("Invalid request body", "error", err)
 		c.JSON(400, gin.H{
 			"error":   "Invalid request format",
+			"details": err.Error(),
+		})
+		return
+	}
+	if err := validateChoreReqLabels(choreReq.LabelsV2); err != nil {
+		logger.Error("Invalid labels", "error", err)
+		c.JSON(400, gin.H{
+			"error":   "Invalid labels",
 			"details": err.Error(),
 		})
 		return
@@ -653,6 +677,14 @@ func (h *Handler) EditChore(c *gin.Context) {
 		logger.Error("Invalid request body", "error", err)
 		c.JSON(400, gin.H{
 			"error": "Invalid request: " + err.Error(),
+		})
+		return
+	}
+	if err := validateChoreReqLabels(choreReq.LabelsV2); err != nil {
+		logger.Error("Invalid labels", "error", err)
+		c.JSON(400, gin.H{
+			"error":   "Invalid labels",
+			"details": err.Error(),
 		})
 		return
 	}
